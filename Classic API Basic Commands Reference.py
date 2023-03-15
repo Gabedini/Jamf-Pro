@@ -1,12 +1,11 @@
 #!/usr/bin/env python
-
 import requests
 import json
 
 username = ''
 password = ''
 url = 'https://INSTANCE_NAME_HERE.jamfcloud.com/'
-
+"""This file is just a basic command reference for the Jamf Pro Classic API"""
 
 """———————————————————————————————————————"""
 """About as basic as it gets. Note: Classic API Defualts XML return."""
@@ -37,8 +36,8 @@ print(content)
 """PUTing computer of ID 8 into a different site using json
 Just kidding, you can't do that with the classic API, only XML"""
 """———————————————————————————————————————"""
-modidfyComputerSite = "<computer><general><site><name>Eau Claire</name></site></general></computer>"
-response = requests.put(url + "JSSResource/computers/id/8", auth = (username, password), headers = {"Accept": "application/json"}, data = modidfyComputerSite )
+modifyComputerSite = "<computer><general><site><name>Eau Claire</name></site></general></computer>"
+response = requests.put(url + "JSSResource/computers/id/8", auth = (username, password), data = modifyComputerSite )
 content = response.text
 print(content)
 

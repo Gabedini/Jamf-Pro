@@ -6,6 +6,7 @@ import requests
 username = ''
 password = ''
 url = 'https://NSTANCE_NAME_HERE.jamfcloud.com/api/v1/'
+"""This file is just a basic command refernce for the Jamf Pro API (the new one)"""
 
 session = requests.Session()
 
