@@ -8,6 +8,7 @@ password = ''
 """This is a placeholder file for a fun project being worked on"""
 session = requests.Session()
 
+
 """This method gets us a bearer token from Jamf Pro."""
 def getToken(url, jpUser, jpPass):
 	response = session.post(url + "auth/token", auth = (jpUser, jpPass))
@@ -43,6 +44,7 @@ def enableIfDisabled(url, dataForHeader):
 		return content
 	else:
 		print("LAPS already enabled, skipping")
+		return "LAPS already enabled, skipping"
 """Note: not sure in what context this would useful other than initial setup, as this would need to be enabled prior to machine enrollment.
 I'll probably just make this a button and then mention that in the GUI somewhere"""
 #enableIfDisabled(jpURL, head)
@@ -102,7 +104,7 @@ class App(customtkinter.CTk):
 		self.minsize(400, 300)
 
 		self.grid_rowconfigure((0, 1), weight=1)
-		self.grid_columnconfigure((0, 3), weight=1)
+		self.grid_columnconfigure((0, 4), weight=1)
 		
 		self.inputURL = customtkinter.CTkEntry(master=self, placeholder_text="https://example.com")
 		self.inputURL.pack(pady=12, padx=10)
@@ -118,19 +120,27 @@ class App(customtkinter.CTk):
 
 
 	def enabling(self):
-		enableIfDisabled(jpURL, head)
+		output = enableIfDisabled(jpURL, head)
+		print(f"Printing the return from the enable laps button{output}")
+		self.outputBox.insert("insert", f"{output}" + "\n")
 		print("you clicked the enable laps button")
 
 	def lapsPass(self):
-		getLAPSPassword(jpURL, head, self.inputClientManagementId.get(), self.inputComputerUser.get())
+		output = getLAPSPassword(jpURL, head, self.inputClientManagementId.get(), self.inputComputerUser.get())
+		print(f"Printing the return from the collecting password button{output}")
+		self.outputBox.insert("insert", f"{output}" + "\n")
 		print("you clicked the collecting password button")
 
 	def gettingHistory(self):
-		getViewedHistory(jpURL, head, self.inputClientManagementId.get(), self.inputComputerUser.get())
+		output = getViewedHistory(jpURL, head, self.inputClientManagementId.get(), self.inputComputerUser.get())
+		print(f"Printing the return from the getting laps history button{output}")
+		self.outputBox.insert("insert", f"{output}" + "\n")
 		print("you clicked the getting laps history button")
 
 	def lapsAccount(self):
-		getLAPSAccount(jpURL, head, self.inputClientManagementId.get())
+		output = getLAPSAccount(jpURL, head, self.inputClientManagementId.get())
+		print(f"Printing the return from the getting account button{output}")
+		self.outputBox.insert("insert", f"{output}" + "\n")
 		print("you clicked the getting account button")
 
 	def optionPage(self):
@@ -151,6 +161,9 @@ class App(customtkinter.CTk):
 
 		self.collectLAPSAccount = customtkinter.CTkButton(master=self, text="Collect LAPS capable Admin", command=self.lapsAccount)
 		self.collectLAPSAccount.grid(row=2, column=1, padx=20, pady=20)
+
+		self.outputBox = customtkinter.CTkTextbox(master=self)
+		self.outputBox.grid(row=3, column=0, columnspan=2, padx=20, pady=20)
 
 
 
