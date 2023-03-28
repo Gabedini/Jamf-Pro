@@ -1,49 +1,51 @@
 #!/usr/bin/env python
 import requests
 import customtkinter
+from datetime import datetime
 
 username = ''
 password = ''
 #jpURL = 'https://jkezuol.kube.jamf.build'
 """This is a placeholder file for a fun project being worked on"""
 session = requests.Session()
-
+logs = open("LAPSTool.log", "w")
 
 """This method gets us a bearer token from Jamf Pro."""
 def getToken(url, jpUser, jpPass):
 	response = session.post(url + "auth/token", auth = (jpUser, jpPass))
-	print(f"{url}auth/token")
-	print(response)
+	logs.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} {url}auth/token")
+	logs.write(response.text)
 	responseData = response.json()
-	print(responseData)
+	logs.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} {str(responseData)}")
 	token = responseData["token"]
-	print(f"this is the token: {token}")
+	logs.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} This is the token: {token}")
+	logs.write("")
 	return token
 
 """Grabs the current settings in Jamf Pro"""
 def getCurrentSettings(url, dataForHeader):
 	response = session.get(url + "local-admin-password/settings", headers=dataForHeader )
-	print(response)
+	logs.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} {response.text}")
 	currentSettings = response.json()
-	print(f"returning current settings {currentSettings}")
+	logs.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} returning current settings {currentSettings}")
 	return currentSettings
 
 """Enables LAPS if disabled"""
 def enableIfDisabled(url, dataForHeader):
 	print("is this thing on?")
 	if currentAutoDeployEnabled == False:
-		print("Currently disbaled, activating")
+		logs.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Currently disbaled, activating")
 		"""putting the 'current' variables in here, likely would make more sense to update these independently, but this can work as default data for now
 		It won't accept leaving out data points, we need to supply them all, it seems. I'll look to see if we can skip them somehow, later"""
 		jsonToEnable = {"autoDeployEnabled":"true", "passwordRotationTime":currentPasswordRotationTime, "autoExpirationTime":currentAutoExpirationTime}
 		response = session.put(url + "local-admin-password/settings", headers=dataForHeader, json = jsonToEnable)
-		print(f"attempt to enable response: {response}")
+		logs.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} attempt to enable response: {response}")
 		content = response.text
-		print(content)
+		logs.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} {content}")
 		print('print something about this not working on machines enrolled before selecting this option')
 		return content
 	else:
-		print("LAPS already enabled, skipping")
+		logs.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} LAPS already enabled, skipping...")
 		return "LAPS already enabled, skipping"
 """Note: not sure in what context this would useful other than initial setup, as this would need to be enabled prior to machine enrollment.
 I'll probably just make this a button and then mention that in the GUI somewhere"""
@@ -53,11 +55,11 @@ I'll probably just make this a button and then mention that in the GUI somewhere
 """Get LAPS password viewed history. (returns the whole json for formatting later)"""
 def getViewedHistory(url, dataForHeader, clientManagementId, username):
 	if clientManagementId == "" or username == "":
-		print("Missing Client Management ID or Username")
+		logs.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Missing Client Management ID or Username")
 		return "Missing Client Management ID or Username"
 	else:
 		response = session.get(url + f"local-admin-password/{clientManagementId}/account/{username}/audit", headers=dataForHeader )
-		print(f"history collection response: {response}")
+		logs.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} History collection response: {response}")
 		history = response.json()
 		print(f"is it running the history function? {history}")
 		return history
@@ -65,11 +67,11 @@ def getViewedHistory(url, dataForHeader, clientManagementId, username):
 """Get current LAPS password for specified username on a client. (returns just the password)"""
 def getLAPSPassword(url, dataForHeader, clientManagementId, username):
 	if clientManagementId == "" or username == "":
-		print("Missing Client Management ID or Username")
+		logs.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Missing Client Management ID or Username")
 		return "Missing Client Management ID or Username"
 	else:
 		response = session.get(url + f"local-admin-password/{clientManagementId}/account/{username}/password", headers=dataForHeader )
-		print(response)
+		logs.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} {response.text}")
 		content = response.json()
 		print(f"{url}local-admin-password/{clientManagementId}/account/{username}/password")
 		print(content)
@@ -79,15 +81,15 @@ def getLAPSPassword(url, dataForHeader, clientManagementId, username):
 """Get the LAPS capable admin accounts for a device. (returns just the account name)"""
 def getLAPSAccount(url, dataForHeader, clientManagementId):
 	if clientManagementId == "":
-		print("Missing Client Management ID")
+		logs.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Missing Client Management ID")
 		return "Missing Client Management ID"
 	else:
 		response = session.get(url + f"local-admin-password/{clientManagementId}/accounts", headers=dataForHeader )
-		print(f"password collection response: {response}")
+		logs.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Password collection response: {response}")
 		content = response.json()
-		print(content)
+		logs.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} {content}")
 		lapsAccount = content["username"]
-		print(f"Returning Account: {lapsAccount}")
+		logs.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Returning Account: {lapsAccount}")
 		return lapsAccount
 
 
@@ -182,6 +184,7 @@ class App(customtkinter.CTk):
 		print(username)
 		print(password)
 		print(jpURL)#debugging purposes
+		logs.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Logging into {jpURL} with username {username}")
 
 
 		"""gets and sets token (note: token is app global but not program global)"""
