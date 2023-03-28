@@ -8,7 +8,7 @@ password = ''
 #jpURL = 'https://jkezuol.kube.jamf.build'
 """This is a placeholder file for a fun project being worked on"""
 session = requests.Session()
-logs = open("LAPSTool.log", "a")
+logs = open("/tmp/LAPSTool.log", "a")
 
 """This method gets us a bearer token from Jamf Pro."""
 def getToken(url, jpUser, jpPass):
