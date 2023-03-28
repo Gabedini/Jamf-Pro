@@ -8,7 +8,7 @@ password = ''
 #jpURL = 'https://jkezuol.kube.jamf.build'
 """This is a placeholder file for a fun project being worked on"""
 session = requests.Session()
-logs = open("LAPSTool.log", "w")
+logs = open("LAPSTool.log", "a")
 
 """This method gets us a bearer token from Jamf Pro."""
 def getToken(url, jpUser, jpPass):
@@ -88,7 +88,7 @@ def getLAPSAccount(url, dataForHeader, clientManagementId):
 		logs.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Password collection response: {response}")
 		content = response.json()
 		logs.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} {content}")
-		lapsAccount = content["username"]
+		lapsAccount = content['results'][0]['username']
 		logs.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Returning Account: {lapsAccount}")
 		return lapsAccount
 
