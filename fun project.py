@@ -16,109 +16,158 @@ clientManagementId = ""
 def getToken(url, jpUser, jpPass):
 	try:
 		response = session.post(url + "auth/token", auth = (jpUser, jpPass))
-		logs.write(f"{datetime.now().strftime(' %Y-%m-%d %H:%M:%S')} Getting token from: {url}auth/token")
-		logs.write(response.text)
+		print(response)
+		if response.status_code == 401:
+			logs.write(f"\n{datetime.now().strftime(' %Y-%m-%d %H:%M:%S')} Tried to get a token: {response} - incorrect username or password.")
+			return "bad creds"
+		logs.write(f"\n{datetime.now().strftime(' %Y-%m-%d %H:%M:%S')} Getting token from: {url}auth/token")
 		responseData = response.json()
-		logs.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Reply: {str(responseData)}")
 		token = responseData["token"]
-		logs.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} This is the token: {token}")
 		return token
 	except requests.exceptions.MissingSchema as error:
 		errorMsg = str(error)
-		print(f"testing print of error {errorMsg}")
+		logs.write(f"\n{datetime.now().strftime(' %Y-%m-%d %H:%M:%S')} Seems like the URL was malformed: {errorMsg}")
 		return errorMsg
 
 """Grabs the current settings in Jamf Pro"""
 def getCurrentSettings(url, dataForHeader):
-	response = session.get(url + "local-admin-password/settings", headers=dataForHeader )
-	logs.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Collecting Current settings: {response.text}")
-	currentSettings = response.json()
-	logs.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} returning current settings {currentSettings}")
-	return currentSettings
+	response = session.get(url + "local-admin-password/settings", headers=dataForHeader)
+	if response.status_code == 401:
+		logs.write(f"\n{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Attempt to collect Current LAPS Settings: {response} - the token may have expired. Please close and reopen app....")
+		return "Token may have expired. Please close and reopen app."
+	elif response.status_code == 200:
+		logs.write(f"\n{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Collecting current settings: {response.text}")
+		currentSettings = response.json()
+		logs.write(f"\n{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} returning current settings: {currentSettings}")
+		return currentSettings
+	else:
+		logs.write(f"\n{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Something went wrong collecting the current settings. It may be that simply your Jamf Pro does not support this endpoint")
+		return "Something went wrong, please ensure your Jamf Pro version is greater than 10.45."
 
-def getManagmentID(url, dataForHeader, computerID):
+"""Gets the Client Management ID from the computer record"""
+def getManagementID(url, dataForHeader, computerID):
 	global clientManagementId
-	response = session.get(url + f"computers-inventory-detail/{computerID}", headers=dataForHeader )
-	logs.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Collecting Managment ID for: {url}computers-inventory-detail/{computerID}")
-	content = response.json()
-	clientManagementId = content["general"]["managementId"]
-	logs.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Collected managemend ID: {clientManagementId}")
-	return clientManagementId
-
+	"""This endpint only appears as computers-inventory in the API GUI"""
+	response = session.get(url + f"computers-inventory-detail/{computerID}", headers=dataForHeader)
+	if response.status_code == 401:
+		logs.write(f"\n{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Attempt to collect Client Management ID: {response} - the token may have expired. Please close and reopen app....")
+		return "Token may have expired. Please close and reopen app."
+	elif response.status_code == 200:
+		logs.write(f"\n{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Collecting Managment ID for: {url}computers-inventory-detail/{computerID}")
+		content = response.json()
+		clientManagementId = content["general"]["managementId"]
+		logs.write(f"\n{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Collected managemend ID: {clientManagementId}")
+		return clientManagementId
+	else:
+		logs.write(f"\n{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Something went wrong. It may be that the computerID or local admin account supplied were unrecognized by the server, or that simply your Jamf Pro does not support this endpoint")
+		return "Unable to gather Client ID when executing the command. Most likely this computer ID either doesn't exist in Jamf Pro or was not configured for this workflow on enrollment"
 
 """Enables LAPS if disabled"""
 def enableIfDisabled(url, dataForHeader):
 	print("is this thing on?")
 	if currentAutoDeployEnabled == False:
-		logs.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Currently disbaled, activating")
+		logs.write(f"\n{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Currently disabled, activating")
 		"""putting the 'current' variables in here, likely would make more sense to update these independently, but this can work as default data for now
 		It won't accept leaving out data points, we need to supply them all, it seems. I'll look to see if we can skip them somehow, later"""
 		jsonToEnable = {"autoDeployEnabled":"true", "passwordRotationTime":currentPasswordRotationTime, "autoExpirationTime":currentAutoExpirationTime}
 		response = session.put(url + "local-admin-password/settings", headers=dataForHeader, json = jsonToEnable)
-		logs.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} attempt to enable response: {response}")
-		content = response.text
-		logs.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} {content}")
-		print('print something about this not working on machines enrolled before selecting this option')
-		return content
+		if response.status_code == 401:
+			logs.write(f"\n{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Attempt to enable LAPS: {response} - the token may have expired. Please close and reopen app....")
+			return "Token may have expired. Please close and reopen app."
+		elif response.status_code == 200:
+			logs.write(f"\n{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Attempt to enable LAPS: {response}")
+			content = response.text
+			logs.write(f"\n{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} {content}")
+			print('consider printing something about this not working on machines enrolled before selecting this option')
+			return content
+		else:
+			logs.write(f"\n{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} If this option errors out it likely means it was a connection error. Closing and re-opening should clear that up.")
+			return "Something went wrong, please ensure your Jamf Pro version is greater than 10.45."
 	else:
-		logs.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} LAPS already enabled, skipping...")
+		logs.write(f"\n{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} LAPS already enabled, skipping...")
 		return "LAPS already enabled, skipping"
 """Note: not sure in what context this would useful other than initial setup, as this would need to be enabled prior to machine enrollment.
 I'll probably just make this a button and then mention that in the GUI somewhere"""
-#enableIfDisabled(jpURL, head)
 
 
-"""Get LAPS password viewed history. (returns the whole json for formatting later)"""
+"""Get LAPS password viewed history. (returns the whole json for formatting later if we feel like it)"""
 def getViewedHistory(url, dataForHeader, computerID, username):
+	global clientManagementId
 	if computerID == "" or username == "":
-		logs.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Missing Computer ID or Username")
+		logs.write(f"\n{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Missing Computer ID or Username")
 		return "Missing Computer ID or Username"
 	else:
 		if clientManagementId == "":
-			logs.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Missing Client Management ID, collecting...")
-			clientManagementID = getManagmentID(jpURL, head, computerID)
-		response = session.get(url + f"local-admin-password/{computerID}/account/{username}/audit", headers=dataForHeader )
-		logs.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} History collection response: {response}")
-		history = response.json()
-		print(f"is it running the history function? {history}")
-		return history
+			logs.write(f"\n{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Missing Client Management ID, collecting...")
+			clientManagementId = getManagementID(jpURL, head, computerID)
+			if clientManagementId.startswith("Unable") == True:
+				return "Unable to get history, Client ManagementID appears to be incorrect. Most likely this computer ID doesn't exist."
+		response = session.get(url + f"local-admin-password/{clientManagementId}/account/{username}/audit", headers=dataForHeader)
+		if response.status_code == 401:
+			logs.write(f"\n{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} History collection: {response} - the token may have expired. Please close and reopen app....")
+			return "Token may have expired. Please close and reopen app."
+		elif response.status_code == 200:
+			logs.write(f"\n{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} History collection: {response}")
+			history = response.json()
+			logs.write(f"\n{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} History: {history}")
+			return history
+		else:
+			logs.write(f"\n{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Something went wrong. It may be that the computerID or local admin account supplied were unrecognized by the server, or that simply your Jamf Pro does not support this endpoint")
+			return "Something went wrong, please ensure your Jamf Pro version is greater than 10.45 and that this computer is configured for this workflow."
 
 """Get current LAPS password for specified username on a client. (returns just the password)"""
 def getLAPSPassword(url, dataForHeader, computerID, username):
+	global clientManagementId
 	if computerID == "" or username == "":
-		logs.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Missing Computer ID or Username")
+		logs.write(f"\n{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Missing Computer ID or Username")
 		return "Missing Computer ID or Username"
 	else:
 		if clientManagementId == "":
-			logs.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Missing Client Management ID, collecting...")
-			clientManagementID = getManagmentID(jpURL, head, computerID)
-		response = session.get(url + f"local-admin-password/{computerID}/account/{username}/password", headers=dataForHeader )
-		logs.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} {response.text}")
-		content = response.json()
-		print(f"{url}local-admin-password/{computerID}/account/{username}/password")
-		print(content)
-		lapsPass = content["password"]
-		return lapsPass
+			logs.write(f"\n{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Missing Client Management ID, collecting...")
+			clientManagementId = getManagementID(jpURL, head, computerID)
+			if clientManagementId.startswith("Unable") == True:
+				return "Unable to get history, Client ManagementID appears to be incorrect. Most likely this computer ID doesn't exist."
+		response = session.get(url + f"local-admin-password/{clientManagementId}/account/{username}/password", headers=dataForHeader)
+		if response.status_code == 401:
+			logs.write(f"\n{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Password collection: {response} - the token may have expired. Please close and reopen app....")
+			return "Token may have expired. Please close and reopen app."
+		elif response.status_code == 200:
+			logs.write(f"\n{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Password collection: {response}. Printing to GUI")
+			content = response.json()
+			lapsPass = content["password"]
+			return lapsPass
+		else:
+			logs.write(f"\n{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Something went wrong. It may be that the computerID or local admin account supplied were unrecognized by the server, or that simply your Jamf Pro does not support this endpoint")
+			return "Something went wrong, please ensure your Jamf Pro version is greater than 10.45."
 
 """Get the LAPS capable admin accounts for a device. (returns just the account name)"""
 def getLAPSAccount(url, dataForHeader, computerID):
-	logs.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Getting LAPS Enabled Account for computer ID:  {computerID}")
+	global clientManagementId
+	logs.write(f"\n{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Getting LAPS Enabled Account for computer ID:  {computerID}")
 	if computerID == "":
-		logs.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Missing Computer ID")
+		logs.write(f"\n{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Missing Computer ID")
 		return "Missing Computer ID"
 	else:
 		if clientManagementId == "":
-			logs.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Missing Client Management ID, collecting...")
-			clientManagementID = getManagmentID(jpURL, head, computerID)
-		response = session.get(url + f"local-admin-password/{clientManagementId}/accounts", headers=dataForHeader )
+			logs.write(f"\n{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Missing Client Management ID, collecting...")
+			clientManagementId == getManagementID(jpURL, head, computerID)
+			if clientManagementId.startswith("Unable") == True:
+				return "Unable to get history, Client ManagementID appears to be incorrect. Most likely this computer ID doesn't exist."
+		response = session.get(url + f"local-admin-password/{clientManagementId}/accounts", headers=dataForHeader)
 		print(f"{url}local-admin-password/{clientManagementId}/accounts")
-		logs.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Password collection response: {response}")
-		content = response.json()
-		logs.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} {content}")
-		lapsAccount = content['results'][0]['username']
-		logs.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Returning Account: {lapsAccount}")
-		return lapsAccount
-
+		if response.status_code == 401:
+			logs.write(f"\n{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Account collection: {response} - the token may have expired. Please close and reopen app....")
+			return "Token may have expired. Please close and reopen app."
+		elif response.status_code == 200:
+			logs.write(f"\n{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Account collection: {response}")
+			content = response.json()
+			logs.write(f"\n{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} {content}")
+			lapsAccount = content['results'][0]['username']
+			logs.write(f"\n{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Account Found: {lapsAccount}")
+			return lapsAccount
+		else:
+			logs.write(f"\n{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Something went wrong. It may be that the computerID or local admin account supplied were unrecognized by the server, or that simply your Jamf Pro does not support this endpoint")
+			return "Something went wrong, please ensure your Jamf Pro version is greater than 10.45."
 
 
 """———————————————————————————————————————"""
@@ -147,30 +196,24 @@ class App(customtkinter.CTk):
 		self.loginButton = customtkinter.CTkButton(master=self, text="Login", command=self.userLogin)
 		self.loginButton.pack(padx=20, pady=20)
 
+		"""This is used later to ensure that we don't add our box to the GUI twice"""
+		self.outputBox = None
 
 	def enabling(self):
 		output = enableIfDisabled(jpURL, head)
-		print(f"Printing the return from the enable laps button{output}")
-		self.outputBox.insert("insert", f"{output}" + "\n")
-		print("you clicked the enable laps button")
+		self.outputBox.insert("insert", f"{output}\n")
 
 	def lapsPass(self):
 		output = getLAPSPassword(jpURL, head, self.inputComputerID.get(), self.inputComputerUser.get())
-		print(f"Printing the return from the collecting password button{output}")
-		self.outputBox.insert("insert", f"{output}" + "\n")
-		print("you clicked the collecting password button")
+		self.outputBox.insert("insert", f"{output}\n")
 
 	def gettingHistory(self):
 		output = getViewedHistory(jpURL, head, self.inputComputerID.get(), self.inputComputerUser.get())
-		print(f"Printing the return from the getting laps history button{output}")
-		self.outputBox.insert("insert", f"{output}" + "\n")
-		print("you clicked the getting laps history button")
+		self.outputBox.insert("insert", f"{output}\n")
 
 	def lapsAccount(self):
 		output = getLAPSAccount(jpURL, head, self.inputComputerID.get())
-		print(f"Printing the return from the getting account button{output}")
-		self.outputBox.insert("insert", f"{output}" + "\n")
-		print("you clicked the getting account button")
+		self.outputBox.insert("insert", f"{output}\n")
 
 	def optionPage(self):
 		self.inputComputerID = customtkinter.CTkEntry(master=self, placeholder_text="Computer ID")
@@ -194,7 +237,6 @@ class App(customtkinter.CTk):
 		self.outputBox = customtkinter.CTkTextbox(master=self)
 		self.outputBox.grid(row=3, column=0, columnspan=2, padx=20, pady=20)
 
-
 	def userLogin(self):
 		"""anything that might be referenced outside of the GUI button functions is global"""
 		global jpURL
@@ -210,7 +252,7 @@ class App(customtkinter.CTk):
 		print(username)
 		print(password)
 		print(jpURL)#debugging purposes
-		logs.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Logging into {jpURL} with username {username}")
+		logs.write(f"\n{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Logging into {jpURL} with username {username}")
 
 
 		"""gets and sets token (note: token is app global but not program global)"""
@@ -218,9 +260,16 @@ class App(customtkinter.CTk):
 		print(token)
 		"""puts token in header for us to pass later"""
 		if token.startswith("Invalid URL") == True:
-			self.outputBox = customtkinter.CTkTextbox(master=self)
-			self.outputBox.pack(padx=20, pady=20)
+			if self.outputBox is None:
+				self.outputBox = customtkinter.CTkTextbox(master=self)
+				self.outputBox.pack(padx=20, pady=20)
 			self.outputBox.insert("insert", f"{token}")
+		if token == "bad creds":
+			if self.outputBox is None:
+				self.outputBox = customtkinter.CTkTextbox(master=self)
+				self.outputBox.pack(padx=20, pady=20)
+			self.outputBox.insert("insert", "Incorrect username or password entered.")
+
 		head = {'Authorization': f'Bearer {token}' }
 
 		"""gets and returns whatever the current settings are"""
@@ -243,9 +292,11 @@ class App(customtkinter.CTk):
 		self.inputUsernm.pack_forget()
 		self.inputPasswd.pack_forget()
 		self.inputURL.pack_forget()
-		self.outputBox.pack_forget()
+		if self.outputBox is None:
+			print("good to go")
+		else:
+			self.outputBox.pack_forget()
 		self.optionPage()
-
 
 if __name__ == "__main__":
 	app = App()
