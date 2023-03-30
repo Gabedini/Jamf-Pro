@@ -1,0 +1,11 @@
+2023-03-28 12:22:52 Logging into https://ganderson.jamfcloud.com
+/api/v1/ with username apiman2023-03-28 12:23:14 Logging into https://ganderson.jamfcloud.com/api/v1/ with username apiman2023-03-28 12:23:15 https://ganderson.jamfcloud.com/api/v1/auth/token{
+  "token" : "eyJhbGciOiJIUzI1NiJ9.eyJhdXRoZW50aWNhdGVkLWFwcCI6IkdFTkVSSUMiLCJhdXRoZW50aWNhdGlvbi10eXBlIjoiSlNTIiwiZ3JvdXBzIjpbXSwic3ViamVjdC10eXBlIjoiSlNTX1VTRVJfSUQiLCJ0b2tlbi11dWlkIjoiZWI0ZDc0YmItYTU0YS00NDIyLTg3MzktYzc1ZmRkNzk0MDIyIiwibGRhcC1zZXJ2ZXItaWQiOi0xLCJzdWIiOiIxMiIsImV4cCI6MTY4MDAyNjI5NX0.Bc3WEmHwrNggWvIxCNilt8qmG4e_lE7eYFsNnF8IIrg",
+  "expires" : "2023-03-28T17:58:15.667Z"
+}2023-03-28 12:23:15 {'token': 'eyJhbGciOiJIUzI1NiJ9.eyJhdXRoZW50aWNhdGVkLWFwcCI6IkdFTkVSSUMiLCJhdXRoZW50aWNhdGlvbi10eXBlIjoiSlNTIiwiZ3JvdXBzIjpbXSwic3ViamVjdC10eXBlIjoiSlNTX1VTRVJfSUQiLCJ0b2tlbi11dWlkIjoiZWI0ZDc0YmItYTU0YS00NDIyLTg3MzktYzc1ZmRkNzk0MDIyIiwibGRhcC1zZXJ2ZXItaWQiOi0xLCJzdWIiOiIxMiIsImV4cCI6MTY4MDAyNjI5NX0.Bc3WEmHwrNggWvIxCNilt8qmG4e_lE7eYFsNnF8IIrg', 'expires': '2023-03-28T17:58:15.667Z'}2023-03-28 12:23:15 This is the token: eyJhbGciOiJIUzI1NiJ9.eyJhdXRoZW50aWNhdGVkLWFwcCI6IkdFTkVSSUMiLCJhdXRoZW50aWNhdGlvbi10eXBlIjoiSlNTIiwiZ3JvdXBzIjpbXSwic3ViamVjdC10eXBlIjoiSlNTX1VTRVJfSUQiLCJ0b2tlbi11dWlkIjoiZWI0ZDc0YmItYTU0YS00NDIyLTg3MzktYzc1ZmRkNzk0MDIyIiwibGRhcC1zZXJ2ZXItaWQiOi0xLCJzdWIiOiIxMiIsImV4cCI6MTY4MDAyNjI5NX0.Bc3WEmHwrNggWvIxCNilt8qmG4e_lE7eYFsNnF8IIrg2023-03-28 12:23:15 {
+  "autoDeployEnabled" : true,
+  "passwordRotationTime" : 3600,
+  "autoExpirationTime" : 7776000
+}2023-03-28 12:23:15 returning current settings {'autoDeployEnabled': True, 'passwordRotationTime': 3600, 'autoExpirationTime': 7776000}2023-03-28 12:23:39 Password collection response: <Response [200]>2023-03-28 12:23:39 {'totalCount': 1, 'results': [{'guid': 'FBBB3DE2-59D6-4E4E-867E-CAF5F14F5AE4', 'username': 'localAdmin'}]}2023-03-28 12:23:39 Returning Account: localAdmin2023-03-28 12:23:45 {
+  "password" : "QMX7RS-YJG7JH-WY7QSB-CGNJMP44"
+}2023-03-28 12:23:48 History collection response: <Response [200]>
