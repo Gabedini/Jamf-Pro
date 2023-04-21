@@ -10,7 +10,9 @@ password = ''
 session = requests.Session()
 logs = open("/tmp/LAPSTool.log", "a")
 global clientManagementId
+global compId
 clientManagementId = ""
+compId = ""
 
 """This method gets us a bearer token from Jamf Pro."""
 def getToken(url, jpUser, jpPass):
@@ -148,6 +150,9 @@ def getLAPSPassword(url, dataForHeader, computerID, username):
 """Get the LAPS capable admin accounts for a device. (returns just the account name)"""
 def getLAPSAccount(url, dataForHeader, computerID):
 	global clientManagementId
+	global compId
+	print("this runs, right?")
+	print(f"global compid is {compId}")
 	logs.write(f"\n{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Getting LAPS Enabled Account for computer ID:  {computerID}")
 	if computerID == "":
 		logs.write(f"\n{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Missing Computer ID")
@@ -155,6 +160,10 @@ def getLAPSAccount(url, dataForHeader, computerID):
 	else:
 		if clientManagementId == "":
 			logs.write(f"\n{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Missing Client Management ID, collecting...")
+			getManagementID(jpURL, head, computerID)
+		if compId != computerID: 
+			compId = computerID
+			logs.write(f"\n{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Computer ID has been updated, getting new Client Management ID...")
 			getManagementID(jpURL, head, computerID)
 		if clientManagementId.startswith("Unable") == True:
 			return "Unable to get history, Client ManagementID appears to be incorrect. Most likely this computer ID doesn't exist."
@@ -217,7 +226,9 @@ class App(customtkinter.CTk):
 		self.outputBox.insert("insert", f"{output}\n")
 
 	def lapsAccount(self):
-		output = getLAPSAccount(jpURL, head, self.inputComputerID.get())
+		compId = self.inputComputerID.get()
+		print(compId)
+		output = getLAPSAccount(jpURL, head, compId)
 		self.outputBox.insert("insert", f"{output}\n")
 
 	def optionPage(self):
