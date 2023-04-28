@@ -96,7 +96,6 @@ def enableIfDisabled(url, dataForHeader):
 """Note: not sure in what context this would useful other than initial setup, as this would need to be enabled prior to machine enrollment.
 I'll probably just make this a button and then mention that in the GUI somewhere"""
 
-
 """Get LAPS password viewed history. (returns the whole json for formatting later if we feel like it)"""
 def getViewedHistory(url, dataForHeader, computerID, username):
 	global clientManagementId

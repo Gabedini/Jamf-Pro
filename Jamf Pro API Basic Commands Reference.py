@@ -5,15 +5,34 @@ import requests
 
 username = 'username'
 password = 'password'
-url = 'https://instancename.jamfcloud.com/' #note, in this example / at the end is needed for below. could change below and not need it up here if you wanted
+url = 'https://INSTANCENAME.jamfcloud.com/api/v1/' #note, in this example /api/v1/ at the end is needed for below. could change below and not need it up here if you wanted
 """This file is just a basic command refernce for the Jamf Pro API (the new one)"""
 
 session = requests.Session()
+
+"""This method gets us a bearer token from Jamf Pro."""
+def getToken(url, jpUser, jpPass):
+	try:
+		response = session.post(url + "auth/token", auth = (jpUser, jpPass))
+		print(response)
+		if response.status_code == 401:
+			return "bad creds"
+		print(response)
+		print(response.text)
+		responseData = response.json()
+		token = responseData["token"]
+		return token
+	except requests.exceptions.MissingSchema as error:
+		errorMsg = str(error)
+		return errorMsg
+getToken(url, username, password)
 
 """———————————————————————————————————————"""
 """We will use token auth like last time. Doing a simple GET here"""
 """———————————————————————————————————————"""
 response = session.post(url + "auth/token", auth = (username, password))
+print(response.text)
+print(response)
 response_data = response.json()
 token = response_data["token"]
 head = {'Authorization': f'Bearer {token}' }
@@ -25,7 +44,7 @@ def getAnItem(urlForCall, dataForHeader):
 	response = session.get(urlForCall + "advanced-mobile-device-searches", headers=dataForHeader )
 	content = response.text
 	print(content)
-getAnItem( url, head)
+getAnItem(url, head)
 
 
 """———————————————————————————————————————"""
