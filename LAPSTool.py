@@ -5,8 +5,7 @@ from datetime import datetime
 
 username = ''
 password = ''
-#jpURL = 'https://jkezuol.kube.jamf.build'
-"""This is a placeholder file for a fun project being worked on"""
+
 session = requests.Session()
 logs = open("/tmp/LAPSTool.log", "a")
 global clientManagementId
@@ -225,9 +224,7 @@ class App(customtkinter.CTk):
 		self.outputBox.insert("insert", f"{output}\n")
 
 	def lapsAccount(self):
-		compId = self.inputComputerID.get()
-		print(compId)
-		output = getLAPSAccount(jpURL, head, compId)
+		output = getLAPSAccount(jpURL, head, self.inputComputerID.get())
 		self.outputBox.insert("insert", f"{output}\n")
 
 	def optionPage(self):
