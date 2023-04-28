@@ -3,9 +3,9 @@
 import requests
 
 
-username = 'apiman'
-password = 'apipass'
-url = 'https://ganderson.jamfcloud.com/api/v1/'
+username = 'username'
+password = 'password'
+url = 'https://instancename.jamfcloud.com/' #note, in this example / at the end is needed for below. could change below and not need it up here if you wanted
 """This file is just a basic command refernce for the Jamf Pro API (the new one)"""
 
 session = requests.Session()
