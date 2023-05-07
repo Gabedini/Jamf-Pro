@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import requests
+import requests, json, keyring
 import customtkinter
 from datetime import datetime
 
@@ -29,6 +29,24 @@ def getToken(url, jpUser, jpPass):
 		errorMsg = str(error)
 		logs.write(f"\n{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Seems like the URL was malformed: {errorMsg}")
 		return errorMsg
+
+"""Grabs the current settings in Jamf Pro"""
+def getComputerID(url, dataForHeader, serialNumber):
+	logs.write(f"\n{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Collecting the computer ID from {serialNumber}")
+	"""because classic API is dumb we need to specify json, so we're doing that below:"""
+	dataForHeader["Accept"] = "application/json"
+	response = session.get(url + f"computers/serialnumber/{serialNumber}", headers=dataForHeader)
+	if response.status_code == 401:
+		logs.write(f"\n{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Failed to collect computer ID: {response} - the token may have expired. Please close and reopen app....")
+		return "Token may have expired. Please close and reopen app."
+	elif response.status_code == 200:
+		content = response.json()
+		computerID = content['computer']['general']['id']
+		logs.write(f"\n{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Successfully collected the computer ID from {serialNumber}: {computerID}")
+		return computerID
+	else:
+		logs.write(f"\n{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ")
+		return "Something went wrong, please check that this serial exists in your Jamf Pro instance."
 
 """Grabs the current settings in Jamf Pro"""
 def getCurrentSettings(url, dataForHeader):
@@ -115,7 +133,8 @@ def getViewedHistory(url, dataForHeader, computerID, username):
 			logs.write(f"\n{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} History collection: {response}")
 			history = response.json()
 			logs.write(f"\n{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} History: {history}")
-			return history
+			prettyHistory = json.dumps(history, indent=4)
+			return prettyHistory
 		else:
 			logs.write(f"\n{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Something went wrong. It may be that the computerID or local admin account supplied were unrecognized by the server, or that simply your Jamf Pro does not support this endpoint")
 			return "Something went wrong, please ensure your Jamf Pro version is greater than 10.45 and that this computer is configured for this workflow."
@@ -199,10 +218,16 @@ class App(customtkinter.CTk):
 		self.inputURL = customtkinter.CTkEntry(master=self, placeholder_text="https://example.com")
 		self.inputURL.pack(pady=12, padx=10)
 
-		self.inputUsernm = customtkinter.CTkEntry(master=self, placeholder_text="Username")
+
+		"""this is the keyring stuff below - trying to get that working, it saves, but I can't call it"""
+		username = "apiman"
+		password = keyring.get_password("LAPS Tool", "username")
+		print(f"get password at least? {password}")
+		print(f"can keyreing really return the password? {keyring.get_password('LAPS Tool', 'username')} ----")
+		self.inputUsernm = customtkinter.CTkEntry(master=self, placeholder_text=keyring.get_password("LAPS Tool", username))
 		self.inputUsernm.pack(pady=12, padx=10)
 		
-		self.inputPasswd = customtkinter.CTkEntry(master=self, placeholder_text="Password", show="*")
+		self.inputPasswd = customtkinter.CTkEntry(master=self, placeholder_text=keyring.get_password("LAPS Tool", password), show="*")
 		self.inputPasswd.pack(pady=12, padx=10)
 		
 		self.loginButton = customtkinter.CTkButton(master=self, text="Login", command=self.userLogin)
@@ -215,43 +240,67 @@ class App(customtkinter.CTk):
 		output = enableIfDisabled(jpURL, head)
 		self.outputBox.insert("insert", f"{output}\n")
 
-	def lapsPass(self):
+	"""def lapsPass(self):
 		output = getLAPSPassword(jpURL, head, self.inputComputerID.get(), self.inputComputerUser.get())
 		self.outputBox.insert("insert", f"{output}\n")
 
 	def gettingHistory(self):
 		output = getViewedHistory(jpURL, head, self.inputComputerID.get(), self.inputComputerUser.get())
-		self.outputBox.insert("insert", f"{output}\n")
+		self.outputBox.insert("insert", f"{output}\n")"""
 
 	def lapsAccount(self):
-		output = getLAPSAccount(jpURL, head, self.inputComputerID.get())
-		self.outputBox.insert("insert", f"{output}\n")
+		computerID = self.inputComputerID.get()
+		print(f"button was clicked, computer ID is: {computerID}")
+		if self.idTypeSwitch.get()==1:
+			global classicURL
+			print("running the computer ID collection")
+			logs.write(f"\n{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Serial Number toggle enabled...running ID collection.")
+			computerID = getComputerID(classicURL, head, self.inputComputerID.get())
+			print(f"computer ID collected: {computerID}")
+
+		unOutput = getLAPSAccount(jpURL, head, computerID)
+		self.outputBox.insert("insert", f"{unOutput}\n")
+
+		pwOutput = getLAPSPassword(jpURL, head, computerID, unOutput)
+		self.outputBox.insert("insert", f"{pwOutput}\n")
+
+		hisOutput = getViewedHistory(jpURL, head, computerID, unOutput)
+		self.outputBox.insert("insert", f"{hisOutput}\n")
 
 	def optionPage(self):
 		self.inputComputerID = customtkinter.CTkEntry(master=self, placeholder_text="Computer ID")
 		self.inputComputerID.grid(row=0, column=0, pady=12, padx=10)
 
+		"""
+		This is going to be removed later - we're going to only have one input box
+		and then have the slider determine if we use the classic API and use serial or if we use
+		the Jamf Pro API and use the computer ID
 		self.inputComputerUser = customtkinter.CTkEntry(master=self, placeholder_text="Local Admin Acount")
-		self.inputComputerUser.grid(row=0, column=1, pady=12, padx=10)
+		self.inputComputerUser.grid(row=0, column=1, pady=12, padx=10)"""
+
+		self.idTypeSwitch = customtkinter.CTkSwitch(master=self, text="Enable for Serial Number")
+		self.idTypeSwitch.grid(row=1, column=0, pady=10, padx=10)
 
 		self.enableLAPS = customtkinter.CTkButton(master=self, text="Enable LAPS", command=self.enabling)
-		self.enableLAPS.grid(row=1, column=0, padx=20, pady=20)
+		self.enableLAPS.grid(row=2, column=0, padx=20, pady=20)
 
-		self.collectViewedHistory = customtkinter.CTkButton(master=self, text="Collect PW Viewed History", command=self.gettingHistory)
+		"""self.collectViewedHistory = customtkinter.CTkButton(master=self, text="Collect PW Viewed History", command=self.gettingHistory)
 		self.collectViewedHistory.grid(row=1, column=1, padx=20, pady=20)
 
 		self.collectCurrentPassword = customtkinter.CTkButton(master=self, text="Collect Current PW", command=self.lapsPass)
-		self.collectCurrentPassword.grid(row=2, column=0, padx=20, pady=20)
+		self.collectCurrentPassword.grid(row=2, column=0, padx=20, pady=20)"""
 
-		self.collectLAPSAccount = customtkinter.CTkButton(master=self, text="Collect LAPS capable Admin", command=self.lapsAccount)
-		self.collectLAPSAccount.grid(row=2, column=1, padx=20, pady=20)
+		self.collectLAPSAccount = customtkinter.CTkButton(master=self, text="Collect LAPS Data", command=self.lapsAccount)
+		self.collectLAPSAccount.grid(row=3, column=0, padx=20, pady=20)
 
 		self.outputBox = customtkinter.CTkTextbox(master=self)
-		self.outputBox.grid(row=3, column=0, columnspan=2, padx=20, pady=20)
+		self.outputBox.configure(wrap="none")
+		self.outputBox.grid(row=4, column=0, columnspan=2, padx=20, pady=20)
 
 	def userLogin(self):
 		"""anything that might be referenced outside of the GUI button functions is global"""
 		global jpURL
+		global classicURL
 		global head
 		global currentAutoDeployEnabled
 		global currentPasswordRotationTime
@@ -260,7 +309,9 @@ class App(customtkinter.CTk):
 		print("login button pressed")
 		username = self.inputUsernm.get()
 		password = self.inputPasswd.get()
+		classicURL = f"{self.inputURL.get()}/JSSResource/"
 		jpURL = f"{self.inputURL.get()}/api/v1/"
+		keyring.set_password("LAPS Tool", username, password)
 		print(username)
 		print(password)
 		print(jpURL)#debugging purposes
@@ -280,7 +331,7 @@ class App(customtkinter.CTk):
 			if self.outputBox is None:
 				self.outputBox = customtkinter.CTkTextbox(master=self)
 				self.outputBox.pack(padx=20, pady=20)
-			self.outputBox.insert("insert", "Incorrect username or password entered.")
+			self.outputBox.insert("insert", f"Incorrect username or password entered.{chr(10)}")
 
 		head = {'Authorization': f'Bearer {token}' }
 
