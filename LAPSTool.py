@@ -202,7 +202,7 @@ def getLAPSAccount(url, dataForHeader, computerID):
 
 
 """———————————————————————————————————————"""
-"""Below this line is all the GUI items"""
+"""Below this line are all the GUI items"""
 """———————————————————————————————————————"""
 customtkinter.set_appearance_mode("System")
 customtkinter.set_default_color_theme("dark-blue")
@@ -214,24 +214,48 @@ class App(customtkinter.CTk):
 
 		self.grid_rowconfigure((0, 1), weight=1)
 		self.grid_columnconfigure((0, 4), weight=1)
-		
-		self.inputURL = customtkinter.CTkEntry(master=self, placeholder_text="https://example.com")
-		self.inputURL.pack(pady=12, padx=10)
 
+		"""this is the keyring stuff below - trying to get that working"""
+		"""Let's configure this to default on if there is a previously saved configuration"""
+		if keyring.get_password("LAPS URL", "url") != None:
+			keyringURL = keyring.get_password("LAPS URL", "url")
+			self.inputURLVar = customtkinter.StringVar(value=keyringURL)
+			self.inputURL = customtkinter.CTkEntry(master=self, textvariable=self.inputURLVar)
+			self.inputURL.pack(pady=12, padx=10)
 
-		"""this is the keyring stuff below - trying to get that working, it saves, but I can't call it"""
-		username = "apiman"
-		password = keyring.get_password("LAPS Tool", "username")
-		print(f"get password at least? {password}")
-		print(f"can keyreing really return the password? {keyring.get_password('LAPS Tool', 'username')} ----")
-		self.inputUsernm = customtkinter.CTkEntry(master=self, placeholder_text=keyring.get_password("LAPS Tool", username))
-		self.inputUsernm.pack(pady=12, padx=10)
+			keyringUSER = keyring.get_password("LAPS Username", "username")
+			self.inputUsernmVar = customtkinter.StringVar(value=keyringUSER)
+			self.inputUsernm = customtkinter.CTkEntry(master=self, textvariable=self.inputUsernmVar)
+			self.inputUsernm.pack(pady=12, padx=10)
 		
-		self.inputPasswd = customtkinter.CTkEntry(master=self, placeholder_text=keyring.get_password("LAPS Tool", password), show="*")
-		self.inputPasswd.pack(pady=12, padx=10)
+			keyringPASS = keyring.get_password("LAPS Password", "password")
+			self.inputPasswordVar = customtkinter.StringVar(value=keyringPASS)
+			self.inputPasswd = customtkinter.CTkEntry(master=self, textvariable=self.inputPasswordVar, show="*")
+			self.inputPasswd.pack(pady=12, padx=10)
 		
-		self.loginButton = customtkinter.CTkButton(master=self, text="Login", command=self.userLogin)
-		self.loginButton.pack(padx=20, pady=20)
+			self.loginButton = customtkinter.CTkButton(master=self, text="Login", command=self.userLogin)
+			self.loginButton.pack(padx=20, pady=20)
+
+			self.saveCredsSwitch = customtkinter.CTkSwitch(master=self, state="enabled", text="Save Credentials")
+			self.saveCredsSwitch.pack(pady=10, padx=10)
+			self.saveCredsSwitch.select()
+
+		else:
+			"""Same stuff but not customized"""
+			self.inputURL = customtkinter.CTkEntry(master=self, placeholder_text="https://example.com")
+			self.inputURL.pack(pady=12, padx=10)
+
+			self.inputUsernm = customtkinter.CTkEntry(master=self, placeholder_text="Username")
+			self.inputUsernm.pack(pady=12, padx=10)
+		
+			self.inputPasswd = customtkinter.CTkEntry(master=self, placeholder_text="Password", show="*")
+			self.inputPasswd.pack(pady=12, padx=10)
+		
+			self.loginButton = customtkinter.CTkButton(master=self, text="Login", command=self.userLogin)
+			self.loginButton.pack(padx=20, pady=20)
+
+			self.saveCredsSwitch = customtkinter.CTkSwitch(master=self, text="Save Credentials")
+			self.saveCredsSwitch.pack(pady=10, padx=10)
 
 		"""This is used later to ensure that we don't add our box to the GUI twice"""
 		self.outputBox = None
@@ -306,16 +330,27 @@ class App(customtkinter.CTk):
 		global currentPasswordRotationTime
 		global currentAutoExpirationTime
 		
-		print("login button pressed")
-		username = self.inputUsernm.get()
-		password = self.inputPasswd.get()
+		"""Making some variables."""
 		classicURL = f"{self.inputURL.get()}/JSSResource/"
 		jpURL = f"{self.inputURL.get()}/api/v1/"
-		keyring.set_password("LAPS Tool", username, password)
-		print(username)
-		print(password)
-		print(jpURL)#debugging purposes
-		logs.write(f"\n{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Logging into {jpURL} with username {username}")
+		username = self.inputUsernm.get()
+		password = self.inputPasswd.get()
+		url = self.inputURL.get()
+
+		print("login button pressed")
+		
+		print(f"{self.inputUsernm.get()}")
+		print(f"{self.inputPasswd.get()}")
+		if self.saveCredsSwitch.get()==1:
+			logs.write(f"\n{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Saving login info on, saving to Keychain.")
+			"""This is where we save things for use in future runs if the toggle is selected"""
+			"""Here's where we save the username, since keyring can only call passwords we just pass 'username' as filler"""
+			keyring.set_password("LAPS Username", "username", username)
+			"""Here's saving the password to the Keychain"""
+			keyring.set_password("LAPS Password", "password", password)
+			"""And here we abuse keyring to save the URL as well as if it's a password so that it doesn't have to be kept in a file"""
+			keyring.set_password("LAPS URL", "url", url)
+			logs.write(f"\n{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Logging into {url} with username {username}")
 
 
 		"""gets and sets token (note: token is app global but not program global)"""
@@ -355,6 +390,7 @@ class App(customtkinter.CTk):
 		self.inputUsernm.pack_forget()
 		self.inputPasswd.pack_forget()
 		self.inputURL.pack_forget()
+		self.saveCredsSwitch.pack_forget()
 		if self.outputBox is None:
 			print("good to go")
 		else:
