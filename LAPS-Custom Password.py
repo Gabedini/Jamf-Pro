@@ -191,4 +191,4 @@ grab clientmanagementid✅
 query usernames✅
 get MDM username from json✅
 use the username and clientmanagement ID to update the password ✅ (if the computer it set up for it, it works)
-disable laps """
+disable laps (do this via /api in browser since it may not be wanted for all runs)"""
