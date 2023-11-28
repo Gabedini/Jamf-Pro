@@ -1,25 +1,65 @@
 #!/usr/bin/env python
 
+"""####################
+This python script will update your Jamf Pro server LAPS user password for a group of computers.
+
+Disclaimers:
+This python script was written for a one-off situation and is in no way 'ideal' or intended for general production usage.
+It is not supported by Jamf or Jamf Support.
+# Copyright (c) 2022 Jamf, All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#   * Redistributions of source code must retain the above copyright
+#     notice, this list of conditions and the following disclaimer.
+#   * Redistributions in binary form must reproduce the above copyright
+#     notice, this list of conditions and the following disclaimer in the
+#     documentation and/or other materials provided with the distribution.
+#   * Neither the name of JAMF nor the names of its contributors may be used
+#	  to endorse or promote products derived from this software without specific
+#     prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY JAMF "AS IS" AND ANY EXPRESS OR IMPLIED
+# WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF 
+# MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+# IN NO EVENT SHALL JAMF BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+# SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, 
+# PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+# OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+"""
+
 import requests
 import json
 import sys
 
+#jamf pro username and password
 username = 'USERNAME'
 password = 'PASSWORD!'
+#group ID of a Smart Group of computers to changethe passwords for
 groupID = 'GROUPIDHERE'
+#the password to be set
 newPassword = "NEWPASSWORD"
-#MDM or JMF
+#MDM or JMF account type
 adminType = 'MDM'
+#jamf pro url, can be updated for on prem if needed
+url = 'https://CLOUDINSTANCE.jamfcloud.com/'
+
+########################################
+######DO NOT EDIT BELOW THIS LINE#######
+########################################
+
 computerIDs = []
 clientManagementIDs = []
 associatedUsernames = []
-url = 'https://CLOUDINSTANCE.jamfcloud.com/' #note, in this example /api/v1/ at the end is needed for below. could change below and not need it up here if you wanted
-"""This file is just a basic command refernce for the Jamf Pro API (the new one)"""
+
 
 session = requests.Session()
 
 """———————————————————————————————————————"""
-"""We will use token auth like last time. Doing a simple GET here"""
+"""GETs a token"""
 """———————————————————————————————————————"""
 response = session.post(url + "api/v1/auth/token", auth = (username, password))
 print(response.text)
@@ -42,6 +82,10 @@ def getAnItem(urlForCall, dataForHeader):
 		computerIDs.append(item)
 getAnItem(url, head)
 
+
+"""———————————————————————————————————————"""
+"""GETs the client management ID for the computers"""
+"""———————————————————————————————————————"""
 def getManagementID(url, dataForHeader, computerID):
 	global clientManagementId
 	"""This endpint only appears as computers-inventory in the API GUI"""
@@ -61,7 +105,9 @@ def getManagementID(url, dataForHeader, computerID):
 		clientManagementId = "Unable"
 		return "Unable to gather Client ID when executing the command. Most likely this computer ID either doesn't exist in Jamf Pro or was not configured for this workflow on enrollment"
 
-	"""Get the LAPS capable admin accounts for a device. (returns just the account name)"""
+"""———————————————————————————————————————"""
+"""Gets the LAPS capable admin accounts for a device. (returns just the account name)"""
+"""———————————————————————————————————————"""
 def getLAPSAccount(url, dataForHeader, computerID):
 	if computerID == "":
 		return "Missing Computer ID"
@@ -109,7 +155,9 @@ def putAnItem(urlForCall, dataForHeader, dataForNewItem, clientManagementId):
 	print(content)
 	print(response.status_code)
 
-#checking things line up
+"""———————————————————————————————————————"""
+"""Tihs is the only error checking it does, it compares the lists to make sure they have the same number of items in each"""
+"""———————————————————————————————————————"""
 if len(associatedUsernames) == len(clientManagementIDs) == len(computerIDs):
 	print("numbers match, let's go")
 else:
